@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hallucination-hunter"
+version = "0.1.0"
+description = "A runnable harness for detecting and evaluating hallucinations in LLM output."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "ramenprotokol" }]
+keywords = ["llm", "evaluation", "hallucination", "groundedness", "ai-safety", "eval"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+# The core engine, the lexical detector, the mock model, metrics, and the CLI
+# depend on NOTHING but the standard library. That is deliberate: anyone can
+# clone this repo and run `hh eval` (and the full test suite) with zero API keys
+# and zero third-party installs. The LLM backends are optional extras below.
+dependencies = []
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.39"]
+openai = ["openai>=1.40"]
+all = ["anthropic>=0.39", "openai>=1.40"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+hh = "hh.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/ramenprotokol/hallucination-hunter"
+Repository = "https://github.com/ramenprotokol/hallucination-hunter"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hh"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

@@ -1,0 +1,155 @@
+# Hallucination Hunter — Evaluation Datasets
+
+This directory contains two JSONL evaluation datasets hand-crafted for the `hallucination-hunter` tool. All data is **synthetic / handcrafted for evaluation purposes** — it is not scraped from the web, does not contain private data, and does not include information about private individuals.
+
+---
+
+## Files
+
+| File | Count | Purpose |
+|------|-------|---------|
+| `groundedness_eval.jsonl` | 120 examples | Static evaluation — answer + gold labels included |
+| `factual_prompts.jsonl` | 112 examples | Live generation — prompts + reference answers, no pre-generated answer |
+
+---
+
+## Schema
+
+### `groundedness_eval.jsonl`
+
+Each line is a JSON object with the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier, e.g. `"ge001"` |
+| `prompt` | string | The question being answered |
+| `context` | string | 1–4 sentence source passage that is the ground truth for the answer |
+| `answer` | string | A 1–3 sentence answer to evaluate for hallucinations |
+| `labels` | object | Human ground-truth labels (see below) |
+
+#### `labels` object
+
+| Sub-field | Type | Description |
+|-----------|------|-------------|
+| `hallucinated` | boolean | `true` if the answer contains at least one claim not supported by the context; `false` if every factual claim is supported |
+| `unsupported_claims` | array of strings | The exact sentence(s) from the answer that are unsupported or contradict the context. Empty list `[]` when `hallucinated` is `false` |
+
+**Example (grounded):**
+```json
+{
+  "id": "ge001",
+  "prompt": "Who wrote Hamlet?",
+  "context": "Hamlet is a tragedy written by William Shakespeare, believed to have been written between 1599 and 1601.",
+  "answer": "Hamlet was written by William Shakespeare, believed to have been composed between 1599 and 1601.",
+  "labels": {"hallucinated": false, "unsupported_claims": []}
+}
+```
+
+**Example (hallucinated):**
+```json
+{
+  "id": "ge052",
+  "prompt": "When was the Eiffel Tower built?",
+  "context": "The Eiffel Tower was constructed between 1887 and 1889 as the entrance arch for the 1889 World's Fair.",
+  "answer": "The Eiffel Tower was built in 1875 as the centerpiece of the Paris World's Fair.",
+  "labels": {"hallucinated": true, "unsupported_claims": ["The Eiffel Tower was built in 1875 as the centerpiece of the Paris World's Fair."]}
+}
+```
+
+---
+
+### `factual_prompts.jsonl`
+
+Each line is a JSON object with the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier, e.g. `"fp001"` |
+| `prompt` | string | The question to be answered by a model at run time |
+| `context` | string | Source passage providing the ground truth for the answer |
+| `reference` | string | The correct, concise answer (used for evaluation after generation) |
+
+There is no `answer` field — these are used to **generate** answers with a model, then run the hallucination detector on the generated text.
+
+---
+
+## Label Semantics
+
+### `hallucinated`
+- `false` — **Grounded**: every factual claim in the answer is clearly supported by the provided `context`.
+- `true` — **Hallucinated**: the answer contains at least one claim that is either fabricated (unverifiable from context) or directly contradicts the context.
+
+### `unsupported_claims`
+Lists the exact sentence(s) from the answer that are hallucinated. The three failure modes covered in this dataset:
+
+| Verdict | Description |
+|---------|-------------|
+| **CONTRADICTED** | The context explicitly states the opposite of the claim (e.g., wrong date, wrong name) |
+| **UNVERIFIABLE** | The claim is plausible but absent from the context — the context provides no evidence for it |
+| **FABRICATED** | The claim invents information not hinted at anywhere in the context |
+
+---
+
+## Dataset Statistics
+
+### `groundedness_eval.jsonl`
+- **Total examples:** 160
+- **Grounded** (`hallucinated: false`): 98
+- **Hallucinated** (`hallucinated: true`): 62
+- **Balance:** ~61% grounded / ~39% hallucinated
+
+### `factual_prompts.jsonl`
+- **Total examples:** 112
+- (No labels — used for live generation)
+
+### Domain coverage (both files)
+History, geography, science, biology, astronomy, sports, technology, literature, art, music, mathematics, medicine, economics, world capitals, physics, chemistry, and more.
+
+### Hallucination failure modes in `groundedness_eval.jsonl`
+- Invented/wrong dates
+- Wrong attribution (wrong person credited)
+- Fabricated numbers or statistics
+- Facts directly contradicted by context
+- Plausible-but-absent details not present in the context
+
+---
+
+## Data Provenance
+
+- **Handcrafted / synthetic** — all examples were created by hand for evaluation purposes.
+- **No web scraping** — context passages are brief synthetic summaries of well-known public facts.
+- **No private data** — all subjects are well-known public figures, events, or scientific facts.
+- **Labels are human ground truth**, not generated by any model.
+
+---
+
+## How to Use
+
+### Evaluate a detector on the static eval set
+
+```bash
+hh eval --dataset data/groundedness_eval.jsonl
+```
+
+### Load the dataset in Python
+
+```python
+import hh
+
+examples = hh.load_dataset("data/groundedness_eval.jsonl")
+prompts  = hh.load_dataset("data/factual_prompts.jsonl")
+
+# Filter grounded examples
+grounded     = [e for e in examples if e.gold_hallucinated is False]
+hallucinated = [e for e in examples if e.gold_hallucinated is True]
+
+print(f"Grounded: {len(grounded)}, Hallucinated: {len(hallucinated)}")
+```
+
+### Generate answers and detect hallucinations
+
+```bash
+# Generate answers for factual_prompts and run detection
+hh generate --dataset data/factual_prompts.jsonl --model gpt-4o --output data/generated_answers.jsonl
+hh eval --dataset data/generated_answers.jsonl
+```
