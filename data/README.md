@@ -8,7 +8,7 @@ This directory contains two JSONL evaluation datasets hand-crafted for the `hall
 
 | File | Count | Purpose |
 |------|-------|---------|
-| `groundedness_eval.jsonl` | 120 examples | Static evaluation — answer + gold labels included |
+| `groundedness_eval.jsonl` | 160 examples | Static evaluation — answer + gold labels included |
 | `factual_prompts.jsonl` | 112 examples | Live generation — prompts + reference answers, no pre-generated answer |
 
 ---
@@ -146,10 +146,15 @@ hallucinated = [e for e in examples if e.gold_hallucinated is True]
 print(f"Grounded: {len(grounded)}, Hallucinated: {len(hallucinated)}")
 ```
 
-### Generate answers and detect hallucinations
+### Generate answers from prompts, then detect hallucinations
+
+`factual_prompts.jsonl` has no `answer` field — pass `--generate` and `hh eval`
+will generate an answer from each prompt (grounded in its `context`) using the
+chosen backend, then run detection on the generated text:
 
 ```bash
-# Generate answers for factual_prompts and run detection
-hh generate --dataset data/factual_prompts.jsonl --model gpt-4o --output data/generated_answers.jsonl
-hh eval --dataset data/generated_answers.jsonl
+# needs the relevant extra + API key, e.g. pip install -e ".[openai]"
+hh eval --dataset data/factual_prompts.jsonl --generate \
+        --model openai --model-id gpt-4o \
+        --verifier llm --out report.md
 ```

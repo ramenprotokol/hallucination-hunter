@@ -45,14 +45,12 @@ def available_detectors() -> list[str]:
 
 def load_detector(name: str, **kwargs) -> Detector:
     if name not in _REGISTRY:
-        raise ValueError(
-            f"unknown detector {name!r}; available: {available_detectors()}"
-        )
+        raise ValueError(f"unknown detector {name!r}; available: {available_detectors()}")
     return _REGISTRY[name](**kwargs)
 
 
 def _register_builtins() -> None:
-    from . import groundedness, self_consistency, reference_judge  # noqa: F401
+    from . import groundedness, reference_judge, self_consistency  # noqa: F401
 
 
 _register_builtins()

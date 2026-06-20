@@ -20,8 +20,9 @@ DEFAULT_MODEL_ID = "claude-sonnet-4-6"
 
 @register("anthropic")
 class AnthropicModel(Model):
-    def __init__(self, model_id: str = DEFAULT_MODEL_ID,
-                 api_key: str | None = None, **_: object) -> None:
+    def __init__(
+        self, model_id: str = DEFAULT_MODEL_ID, api_key: str | None = None, **_: object
+    ) -> None:
         self.model_id = model_id
         self._api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
         self._client = None
@@ -41,8 +42,14 @@ class AnthropicModel(Model):
         self._client = anthropic.Anthropic(api_key=self._api_key)
         return self._client
 
-    def generate(self, prompt: str, *, system: str | None = None,
-                 temperature: float = 0.0, max_tokens: int = 1024) -> str:
+    def generate(
+        self,
+        prompt: str,
+        *,
+        system: str | None = None,
+        temperature: float = 0.0,
+        max_tokens: int = 1024,
+    ) -> str:
         client = self._ensure_client()
         kwargs = {
             "model": self.model_id,

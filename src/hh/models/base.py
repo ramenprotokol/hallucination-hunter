@@ -18,8 +18,14 @@ class Model(ABC):
     name: str = "model"
 
     @abstractmethod
-    def generate(self, prompt: str, *, system: str | None = None,
-                 temperature: float = 0.0, max_tokens: int = 1024) -> str:
+    def generate(
+        self,
+        prompt: str,
+        *,
+        system: str | None = None,
+        temperature: float = 0.0,
+        max_tokens: int = 1024,
+    ) -> str:
         """Return the model's completion for `prompt`."""
         raise NotImplementedError
 
@@ -48,15 +54,13 @@ def available_backends() -> list[str]:
 def load_model(name: str, **kwargs) -> Model:
     """Instantiate a registered backend by name (e.g. 'mock', 'anthropic')."""
     if name not in _REGISTRY:
-        raise ValueError(
-            f"unknown model backend {name!r}; available: {available_backends()}"
-        )
+        raise ValueError(f"unknown model backend {name!r}; available: {available_backends()}")
     return _REGISTRY[name](**kwargs)
 
 
 # Importing the package registers the built-in backends as a side effect.
 def _register_builtins() -> None:
-    from . import mock, anthropic, openai  # noqa: F401
+    from . import anthropic, mock, openai  # noqa: F401
 
 
 _register_builtins()

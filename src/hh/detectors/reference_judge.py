@@ -18,16 +18,13 @@ from .groundedness import GroundednessDetector
 
 @register("reference_judge")
 class ReferenceJudgeDetector(Detector):
-    def __init__(self, verifier: str = "lexical", model: Model | None = None,
-                 **_: object) -> None:
+    def __init__(self, verifier: str = "lexical", model: Model | None = None, **_: object) -> None:
         self._inner = GroundednessDetector(verifier=verifier, model=model)
         self.verifier_name = verifier
 
     def detect(self, example: Example) -> Detection:
         if not example.reference:
-            raise ValueError(
-                f"example {example.id!r} has no reference answer to judge against"
-            )
+            raise ValueError(f"example {example.id!r} has no reference answer to judge against")
         # Treat the reference answer as the context the claims must match.
         proxy = Example(**{**example.__dict__, "context": example.reference})
         det = self._inner.detect(proxy)

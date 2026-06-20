@@ -6,6 +6,22 @@ on:
   pull_request:
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Ruff lint
+        run: ruff check .
+      - name: Ruff format check
+        run: ruff format --check .
+      - name: Type check
+        run: mypy src
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -19,6 +35,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: pip
 
       - name: Install (editable, with dev extras)
         run: |
@@ -26,7 +43,7 @@ jobs:
           pip install -e ".[dev]"
 
       - name: Run tests (offline, no API keys)
-        run: pytest -q
+        run: pytest --cov=hh --cov-report=term-missing
 
       - name: Smoke-test the CLI
         run: |

@@ -19,8 +19,9 @@ _SYMBOL = {
 }
 
 
-def to_markdown(run: EvalRun, title: str = "Hallucination-Hunter Report",
-                show_examples: int = 5) -> str:
+def to_markdown(
+    run: EvalRun, title: str = "Hallucination-Hunter Report", show_examples: int = 5
+) -> str:
     r = run.result
     lines = [f"# {title}", ""]
     lines += [
@@ -29,8 +30,7 @@ def to_markdown(run: EvalRun, title: str = "Hallucination-Hunter Report",
         f"- **Claims checked:** {r.n_claims}",
         f"- **Hallucination rate:** {r.hallucination_rate:.1%} "
         f"(answers flagged with >=1 unsupported claim)",
-        f"- **Mean groundedness:** {r.mean_groundedness:.1%} "
-        f"(share of claims supported)",
+        f"- **Mean groundedness:** {r.mean_groundedness:.1%} (share of claims supported)",
         "",
     ]
 

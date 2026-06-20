@@ -4,16 +4,14 @@ from __future__ import annotations
 
 import json
 
-import pytest
-
 from hh.claims import LLMClaimExtractor, SentenceClaimExtractor
 from hh.models.mock import MockModel
 from hh.types import Claim
 
-
 # ---------------------------------------------------------------------------
 # SentenceClaimExtractor
 # ---------------------------------------------------------------------------
+
 
 class TestSentenceClaimExtractor:
     def setup_method(self):
@@ -76,6 +74,7 @@ class TestSentenceClaimExtractor:
 # ---------------------------------------------------------------------------
 # LLMClaimExtractor
 # ---------------------------------------------------------------------------
+
 
 class TestLLMClaimExtractor:
     def test_returns_claims_from_json_array(self):

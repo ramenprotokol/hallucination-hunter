@@ -15,31 +15,35 @@ import sys
 
 from . import __version__
 from .dataset import load_dataset
-from .detectors.base import available_detectors, load_detector
+from .detectors.base import Detector, available_detectors, load_detector
 from .eval import EvalRun, run_eval
 from .metrics import evaluate
-from .models.base import available_backends, load_model
+from .models.base import Model, available_backends, load_model
 from .report import to_json, to_markdown
 from .types import Example
 
 
-def _build_detector(args) -> object:
-    kwargs = {}
+def _build_detector(args) -> Detector:
+    kwargs: dict[str, object] = {}
     if getattr(args, "verifier", None):
         kwargs["verifier"] = args.verifier
     model = None
     if getattr(args, "verifier", None) == "llm" or args.detector == "self_consistency":
-        model = load_model(args.model, model_id=args.model_id) if args.model_id \
+        model = (
+            load_model(args.model, model_id=args.model_id)
+            if args.model_id
             else load_model(args.model)
+        )
         kwargs["model"] = model
     return load_detector(args.detector, **kwargs)
 
 
-def _generator(args):
+def _generator(args) -> Model | None:
     if not getattr(args, "generate", False):
         return None
-    return load_model(args.model, model_id=args.model_id) if args.model_id \
-        else load_model(args.model)
+    return (
+        load_model(args.model, model_id=args.model_id) if args.model_id else load_model(args.model)
+    )
 
 
 def cmd_eval(args) -> int:
@@ -52,8 +56,7 @@ def cmd_eval(args) -> int:
 
 def cmd_detect(args) -> int:
     detector = _build_detector(args)
-    ex = Example(id="adhoc", prompt=args.prompt or "", context=args.context,
-                 answer=args.answer)
+    ex = Example(id="adhoc", prompt=args.prompt or "", context=args.context, answer=args.answer)
     det = detector.detect(ex)
     run = EvalRun(result=evaluate([det]), detections=[det])
     _emit(run, args)
@@ -77,15 +80,25 @@ def _emit(run: EvalRun, args) -> None:
 
 
 def _add_detector_flags(p: argparse.ArgumentParser) -> None:
-    p.add_argument("--detector", default="groundedness",
-                   choices=available_detectors(),
-                   help="detection strategy (default: groundedness)")
-    p.add_argument("--verifier", default="lexical", choices=["lexical", "llm"],
-                   help="how claims are verified (default: lexical, no API key)")
-    p.add_argument("--model", default="mock", choices=available_backends(),
-                   help="model backend for the llm verifier / generation")
-    p.add_argument("--model-id", default=None,
-                   help="override the backend's default model id")
+    p.add_argument(
+        "--detector",
+        default="groundedness",
+        choices=available_detectors(),
+        help="detection strategy (default: groundedness)",
+    )
+    p.add_argument(
+        "--verifier",
+        default="lexical",
+        choices=["lexical", "llm"],
+        help="how claims are verified (default: lexical, no API key)",
+    )
+    p.add_argument(
+        "--model",
+        default="mock",
+        choices=available_backends(),
+        help="model backend for the llm verifier / generation",
+    )
+    p.add_argument("--model-id", default=None, help="override the backend's default model id")
     p.add_argument("--format", default="markdown", choices=["markdown", "json"])
     p.add_argument("--out", default=None, help="write the report to a file")
 
@@ -95,14 +108,18 @@ def build_parser() -> argparse.ArgumentParser:
         prog="hh",
         description="hallucination-hunter — detect and evaluate LLM hallucinations.",
     )
-    parser.add_argument("--version", action="version",
-                        version=f"hallucination-hunter {__version__}")
+    parser.add_argument(
+        "--version", action="version", version=f"hallucination-hunter {__version__}"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     pe = sub.add_parser("eval", help="evaluate a detector over a dataset")
     pe.add_argument("--dataset", required=True, help="path to a JSONL dataset")
-    pe.add_argument("--generate", action="store_true",
-                    help="generate answers from prompts using --model before detecting")
+    pe.add_argument(
+        "--generate",
+        action="store_true",
+        help="generate answers from prompts using --model before detecting",
+    )
     _add_detector_flags(pe)
     pe.set_defaults(func=cmd_eval)
 

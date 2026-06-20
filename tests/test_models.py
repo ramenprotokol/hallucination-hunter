@@ -2,18 +2,16 @@
 
 from __future__ import annotations
 
-import os
-
 import pytest
 
 import hh
 from hh.models.base import available_backends, load_model
 from hh.models.mock import MockModel
 
-
 # ---------------------------------------------------------------------------
 # Registry helpers
 # ---------------------------------------------------------------------------
+
 
 class TestAvailableBackends:
     def test_returns_list(self):
@@ -52,6 +50,7 @@ class TestLoadModel:
 # MockModel behaviour
 # ---------------------------------------------------------------------------
 
+
 class TestMockModel:
     def test_exact_fixture_match(self):
         model = MockModel(fixtures={"hello": "world"})
@@ -78,10 +77,13 @@ class TestMockModel:
     def test_heuristic_claim_context_prompt(self):
         """Heuristic fires for CLAIM:/CONTEXT: structured prompts."""
         model = MockModel()
-        prompt = "CLAIM:\nParis is the capital of France.\n\nCONTEXT:\nParis is the capital of France.\n"
+        prompt = (
+            "CLAIM:\nParis is the capital of France.\n\nCONTEXT:\nParis is the capital of France.\n"
+        )
         result = model.generate(prompt)
         # Should return a JSON object with a "support" key
         import json
+
         data = json.loads(result)
         assert "support" in data
         assert data["support"] in ("supported", "contradicted", "unverifiable")
@@ -104,6 +106,7 @@ class TestMockModel:
 # Anthropic: no API key -> RuntimeError on generate
 # ---------------------------------------------------------------------------
 
+
 class TestAnthropicNoKey:
     def test_load_anthropic_succeeds(self):
         """load_model('anthropic') should not raise — client is created lazily."""
@@ -121,6 +124,7 @@ class TestAnthropicNoKey:
 # ---------------------------------------------------------------------------
 # OpenAI: no API key -> RuntimeError on generate
 # ---------------------------------------------------------------------------
+
 
 class TestOpenAINoKey:
     def test_load_openai_succeeds(self):

@@ -35,9 +35,7 @@ class Support(str, Enum):
 # A claim counts as a hallucination if the context does not back it up. Both an
 # outright contradiction and an unverifiable (fabricated / unsupported) claim are
 # failures of groundedness — the two non-SUPPORTED verdicts.
-HALLUCINATION_VERDICTS: frozenset[Support] = frozenset(
-    {Support.CONTRADICTED, Support.UNVERIFIABLE}
-)
+HALLUCINATION_VERDICTS: frozenset[Support] = frozenset({Support.CONTRADICTED, Support.UNVERIFIABLE})
 
 
 @dataclass(frozen=True)
@@ -91,7 +89,7 @@ class Example:
     meta: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "Example":
+    def from_dict(cls, d: dict[str, Any]) -> Example:
         labels = d.get("labels", {}) or {}
         gold = labels.get("hallucinated", d.get("gold_hallucinated"))
         return cls(

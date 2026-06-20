@@ -18,8 +18,14 @@ from .models.base import available_backends, load_model
 from .types import Detection, Example, Support, Verdict
 
 
-def detect(answer: str, context: str = "", *, detector: str = "groundedness",
-           verifier: str = "lexical", model=None) -> Detection:
+def detect(
+    answer: str,
+    context: str = "",
+    *,
+    detector: str = "groundedness",
+    verifier: str = "lexical",
+    model=None,
+) -> Detection:
     """Convenience one-shot: check a single answer against a context."""
     kwargs = {"verifier": verifier}
     if model is not None:

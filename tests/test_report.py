@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import json
 
-import pytest
-
 from hh.detectors.base import load_detector
 from hh.eval import EvalRun, run_eval
 from hh.report import to_json, to_markdown

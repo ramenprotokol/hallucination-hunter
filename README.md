@@ -1,5 +1,10 @@
 # hallucination-hunter
 
+[![CI](https://github.com/ramenprotokol/hallucination-hunter/actions/workflows/ci.yml/badge.svg)](https://github.com/ramenprotokol/hallucination-hunter/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](pyproject.toml)
+![Runs offline](https://img.shields.io/badge/runs-offline%2C%20no%20API%20key-brightgreen)
+
 **A small, runnable harness for detecting and evaluating hallucinations in LLM output.**
 
 LLMs state things that aren't true with total confidence. `hallucination-hunter`
@@ -38,9 +43,19 @@ hh detect \
 hh eval --dataset data/groundedness_eval.jsonl --detector groundedness --format markdown
 ```
 
-`hh detect` above flags the da Vinci claim as unsupported while passing the
-"in Paris" claim — no API key required, because the default verifier is the
-deterministic lexical baseline.
+That prints a per-claim verdict — no API key required, because the default
+verifier is the deterministic lexical baseline:
+
+```
+### adhoc — 🚩 hallucinated
+
+- ✓ supported     — The Eiffel Tower is in Paris.
+    3/3 content words found in context
+- ? unverifiable  — It was designed by Leonardo da Vinci.
+    claim content words largely absent from context
+```
+
+The "in Paris" claim passes; the fabricated "da Vinci" claim is flagged.
 
 To run with a real model judge:
 
@@ -74,6 +89,31 @@ Each claim gets one of three verdicts:
 | `supported` | the context entails the claim | no |
 | `contradicted` | the context states the opposite | **yes** |
 | `unverifiable` | no evidence in the context either way | **yes** |
+
+## Results
+
+The dependency-free **lexical** detector, run over the bundled 160-example
+labeled set (`data/groundedness_eval.jsonl`, 271 claims). Positive class is
+*hallucinated*:
+
+| Metric | Value |
+|---|---|
+| Precision | 0.72 |
+| Recall | 0.87 |
+| F1 | 0.79 |
+| Accuracy | 0.82 |
+
+This is an honest baseline, not a leaderboard score: the lexical verifier needs
+no model and no API key, so it trades precision for recall and is blind to
+paraphrase. Reproduce it yourself — the numbers are generated, not hand-written:
+
+```bash
+hh eval --dataset data/groundedness_eval.jsonl --verifier lexical
+```
+
+The full report is committed at [`reports/groundedness_lexical.md`](reports/groundedness_lexical.md).
+The `llm` verifier (a model judge) trades the offline guarantee for higher
+precision.
 
 ## Architecture
 
@@ -112,13 +152,20 @@ See [`docs/architecture.md`](docs/architecture.md), the
 ```python
 import hh
 
-context = "Marie Curie won Nobel Prizes in Physics (1903) and Chemistry (1911)."
-result = hh.detect("Marie Curie won three Nobel Prizes.", context)
+context = "The Eiffel Tower is a wrought-iron tower in Paris, completed in 1889 by Gustave Eiffel's company."
+result = hh.detect("The Eiffel Tower is in Paris. It was designed by Leonardo da Vinci.", context)
 
 print(result.predicted_hallucinated)   # True
 for v in result.verdicts:
     print(v.support.value, "-", v.claim.text)
+# supported     - The Eiffel Tower is in Paris.
+# unverifiable  - It was designed by Leonardo da Vinci.
 ```
+
+> Note: the default verifier is a lexical (token-overlap) baseline — fast and
+> offline, but it can miss contradictions that reuse the context's words (e.g.
+> a wrong number). For those, use `verifier="llm"` with a model backend. See
+> [`docs/methodology.md`](docs/methodology.md) for the honest tradeoffs.
 
 ## Datasets
 
@@ -130,11 +177,25 @@ immediately; the schema is documented in [`data/README.md`](data/README.md).
  "labels": {"hallucinated": true, "unsupported_claims": ["..."]}}
 ```
 
+## How this relates to existing work
+
+Groundedness checking builds on ideas from **RAGAS** (RAG faithfulness metrics),
+**SelfCheckGPT** (sampling-based consistency), and **DeepEval** (LLM-as-judge
+test suites). `hallucination-hunter` is deliberately smaller and more
+transparent: a single readable pipeline, a deterministic lexical baseline that
+needs no model or API key, and labeled data plus precision/recall/F1 committed
+in-repo so every number is reproducible offline. It is a clear reference
+implementation, not a benchmark leaderboard — for standardized benchmark scores,
+**TruthfulQA**, **FEVER**, and **FActScore** remain the references (see
+[`research/summary.md`](research/summary.md)).
+
 ## Development
 
 ```bash
 pip install -e ".[dev]"
 pytest            # full suite runs offline, no API keys
+ruff check .      # lint
+ruff format .     # format
 ```
 
 ## License

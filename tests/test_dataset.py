@@ -10,10 +10,10 @@ import pytest
 from hh.dataset import load_dataset, save_dataset
 from hh.types import Example
 
-
 # ---------------------------------------------------------------------------
 # Round-trip: save_dataset then load_dataset
 # ---------------------------------------------------------------------------
+
 
 class TestRoundTrip:
     def test_basic_round_trip(self, tmp_path: Path):
@@ -32,8 +32,9 @@ class TestRoundTrip:
 
     def test_gold_labels_round_trip(self, tmp_path: Path):
         examples = [
-            Example(id="a", answer="x", gold_hallucinated=True,
-                    gold_unsupported_claims=["claim X"]),
+            Example(
+                id="a", answer="x", gold_hallucinated=True, gold_unsupported_claims=["claim X"]
+            ),
         ]
         p = tmp_path / "labeled.jsonl"
         save_dataset(examples, p)
@@ -60,6 +61,7 @@ class TestRoundTrip:
 # ---------------------------------------------------------------------------
 # Comment and blank line handling
 # ---------------------------------------------------------------------------
+
 
 class TestSpecialLines:
     def test_blank_lines_skipped(self, tmp_path: Path):
@@ -92,6 +94,7 @@ class TestSpecialLines:
 # ---------------------------------------------------------------------------
 # Malformed JSON
 # ---------------------------------------------------------------------------
+
 
 class TestMalformedJSON:
     def test_malformed_json_raises_value_error(self, tmp_path: Path):

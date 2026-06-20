@@ -21,8 +21,9 @@ class EvalRun:
     detections: list[Detection]
 
 
-def run_eval(examples: list[Example], detector: Detector,
-             generator: Model | None = None) -> EvalRun:
+def run_eval(
+    examples: list[Example], detector: Detector, generator: Model | None = None
+) -> EvalRun:
     """Run `detector` over `examples`, generating answers first if needed."""
     prepared: list[Example] = []
     for ex in examples:

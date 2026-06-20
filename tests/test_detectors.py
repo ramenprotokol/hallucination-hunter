@@ -9,14 +9,13 @@ import pytest
 from hh.detectors.base import available_detectors, load_detector
 from hh.detectors.groundedness import GroundednessDetector, LexicalVerifier, LLMVerifier
 from hh.detectors.self_consistency import SelfConsistencyDetector
-from hh.detectors.reference_judge import ReferenceJudgeDetector
 from hh.models.mock import MockModel
 from hh.types import Claim, Example, Support
-
 
 # ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
+
 
 class TestDetectorRegistry:
     def test_available_detectors_includes_groundedness(self):
@@ -44,6 +43,7 @@ class TestDetectorRegistry:
 # ---------------------------------------------------------------------------
 # LexicalVerifier
 # ---------------------------------------------------------------------------
+
 
 class TestLexicalVerifier:
     def setup_method(self):
@@ -79,6 +79,7 @@ class TestLexicalVerifier:
 # ---------------------------------------------------------------------------
 # GroundednessDetector (lexical)
 # ---------------------------------------------------------------------------
+
 
 class TestGroundednessDetectorLexical:
     def test_grounded_answer(self):
@@ -124,14 +125,13 @@ class TestGroundednessDetectorLexical:
 # GroundednessDetector (llm verifier with MockModel)
 # ---------------------------------------------------------------------------
 
+
 class TestGroundednessDetectorLLM:
     def _make_llm_detector_with_fixture(self, claim_text, context_text, support_value):
         model = MockModel()
-        from hh.detectors.groundedness import LLMVerifier
         prompt = LLMVerifier.PROMPT.format(context=context_text, claim=claim_text)
         model.add_fixture(
-            prompt,
-            json.dumps({"support": support_value, "rationale": "test rationale"})
+            prompt, json.dumps({"support": support_value, "rationale": "test rationale"})
         )
         return load_detector("groundedness", verifier="llm", model=model)
 
@@ -164,12 +164,14 @@ class TestGroundednessDetectorLLM:
 # SelfConsistencyDetector
 # ---------------------------------------------------------------------------
 
+
 class TestSelfConsistencyDetector:
     def test_basic_run_completes(self):
         model = MockModel()
         # Pre-seed the model so samples are deterministic
-        model.add_fixture("What color is the sky?",
-                          "The sky is blue. It appears blue due to Rayleigh scattering.")
+        model.add_fixture(
+            "What color is the sky?", "The sky is blue. It appears blue due to Rayleigh scattering."
+        )
         detector = SelfConsistencyDetector(model=model, samples=3, temperature=0.8)
         ex = Example(
             id="sc1",
@@ -207,6 +209,7 @@ class TestSelfConsistencyDetector:
 # ---------------------------------------------------------------------------
 # ReferenceJudgeDetector
 # ---------------------------------------------------------------------------
+
 
 class TestReferenceJudgeDetector:
     def test_raises_when_no_reference(self):

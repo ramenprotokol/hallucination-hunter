@@ -39,9 +39,38 @@ def _tokens(text: str) -> list[str]:
 
 
 _STOP = {
-    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being", "of",
-    "to", "in", "on", "at", "and", "or", "for", "with", "as", "by", "that",
-    "this", "it", "its", "from", "has", "have", "had", "but", "not", "no",
+    "the",
+    "a",
+    "an",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being",
+    "of",
+    "to",
+    "in",
+    "on",
+    "at",
+    "and",
+    "or",
+    "for",
+    "with",
+    "as",
+    "by",
+    "that",
+    "this",
+    "it",
+    "its",
+    "from",
+    "has",
+    "have",
+    "had",
+    "but",
+    "not",
+    "no",
 }
 
 
@@ -59,8 +88,7 @@ class LexicalVerifier(Verifier):
 
     NEGATIONS = {"not", "no", "never", "none", "cannot", "n't", "without"}
 
-    def __init__(self, support_threshold: float = 0.6,
-                 unverifiable_threshold: float = 0.4) -> None:
+    def __init__(self, support_threshold: float = 0.6, unverifiable_threshold: float = 0.4) -> None:
         self.support_threshold = support_threshold
         self.unverifiable_threshold = unverifiable_threshold
 
@@ -68,8 +96,7 @@ class LexicalVerifier(Verifier):
         ct = _content_tokens(claim.text)
         xt = _content_tokens(context)
         if not ct:
-            return Verdict(claim, Support.UNVERIFIABLE, 0.0,
-                           "empty claim after tokenization")
+            return Verdict(claim, Support.UNVERIFIABLE, 0.0, "empty claim after tokenization")
         overlap = len(ct & xt) / len(ct)
         claim_neg = bool(_tokens(claim.text)) and any(
             n in claim.text.lower() for n in self.NEGATIONS
@@ -77,17 +104,33 @@ class LexicalVerifier(Verifier):
         context_neg = any(n in context.lower() for n in self.NEGATIONS)
         # Strong lexical match but opposite polarity -> likely contradiction.
         if overlap >= self.support_threshold and claim_neg != context_neg:
-            return Verdict(claim, Support.CONTRADICTED, round(overlap, 3),
-                           "high lexical overlap but mismatched negation")
+            return Verdict(
+                claim,
+                Support.CONTRADICTED,
+                round(overlap, 3),
+                "high lexical overlap but mismatched negation",
+            )
         if overlap >= self.support_threshold:
-            return Verdict(claim, Support.SUPPORTED, round(overlap, 3),
-                           f"{len(ct & xt)}/{len(ct)} content words found in context")
+            return Verdict(
+                claim,
+                Support.SUPPORTED,
+                round(overlap, 3),
+                f"{len(ct & xt)}/{len(ct)} content words found in context",
+            )
         if overlap < self.unverifiable_threshold:
-            return Verdict(claim, Support.UNVERIFIABLE, round(1 - overlap, 3),
-                           "claim content words largely absent from context")
+            return Verdict(
+                claim,
+                Support.UNVERIFIABLE,
+                round(1 - overlap, 3),
+                "claim content words largely absent from context",
+            )
         # Middle ground: not enough evidence to call it supported.
-        return Verdict(claim, Support.UNVERIFIABLE, round(1 - overlap, 3),
-                       "partial overlap, insufficient to confirm support")
+        return Verdict(
+            claim,
+            Support.UNVERIFIABLE,
+            round(1 - overlap, 3),
+            "partial overlap, insufficient to confirm support",
+        )
 
 
 class LLMVerifier(Verifier):
@@ -143,8 +186,13 @@ def _parse_verdict(raw: str) -> tuple[Support, str]:
 class GroundednessDetector(Detector):
     """Extract claims, verify each against the context, aggregate."""
 
-    def __init__(self, verifier: str = "lexical", model: Model | None = None,
-                 extractor: ClaimExtractor | None = None, **_: object) -> None:
+    def __init__(
+        self,
+        verifier: str = "lexical",
+        model: Model | None = None,
+        extractor: ClaimExtractor | None = None,
+        **_: object,
+    ) -> None:
         self.extractor = extractor or SentenceClaimExtractor()
         self.verifier_name = verifier
         if verifier == "lexical":
@@ -159,5 +207,6 @@ class GroundednessDetector(Detector):
     def detect(self, example: Example) -> Detection:
         claims = self.extractor.extract(example.answer)
         verdicts = [self.verifier.verify(c, example.context) for c in claims]
-        return Detection(example=example, verdicts=verdicts,
-                         detector=f"groundedness:{self.verifier_name}")
+        return Detection(
+            example=example, verdicts=verdicts, detector=f"groundedness:{self.verifier_name}"
+        )

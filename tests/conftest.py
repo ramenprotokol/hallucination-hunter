@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from hh.models.mock import MockModel
-from hh.types import Claim, Example, Support, Verdict
+from hh.types import Example
 
 
 @pytest.fixture

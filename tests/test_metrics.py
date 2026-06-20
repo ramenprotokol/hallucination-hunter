@@ -4,21 +4,23 @@ from __future__ import annotations
 
 import pytest
 
-from hh.metrics import ConfusionMatrix, EvalResult, evaluate
+from hh.metrics import ConfusionMatrix, evaluate
 from hh.types import Claim, Detection, Example, Support, Verdict
 
 
-def _make_detection(example_id: str, supports: list[Support],
-                    gold: bool | None = None) -> Detection:
+def _make_detection(
+    example_id: str, supports: list[Support], gold: bool | None = None
+) -> Detection:
     ex = Example(id=example_id, answer="some answer", gold_hallucinated=gold)
     claims = [Claim(text=f"c{i}", index=i) for i in range(len(supports))]
-    verdicts = [Verdict(claim=c, support=s) for c, s in zip(claims, supports)]
+    verdicts = [Verdict(claim=c, support=s) for c, s in zip(claims, supports, strict=True)]
     return Detection(example=ex, verdicts=verdicts, detector="test-det")
 
 
 # ---------------------------------------------------------------------------
 # ConfusionMatrix
 # ---------------------------------------------------------------------------
+
 
 class TestConfusionMatrix:
     def test_precision(self):
@@ -71,6 +73,7 @@ class TestConfusionMatrix:
 # ---------------------------------------------------------------------------
 # evaluate()
 # ---------------------------------------------------------------------------
+
 
 class TestEvaluate:
     def test_empty_detections(self):

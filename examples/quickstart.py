@@ -19,7 +19,6 @@ Or without installing (PYTHONPATH):
 import hh
 import hh.report
 
-
 # ---------------------------------------------------------------------------
 # (a) Single-answer detection — grounded and hallucinated examples
 # ---------------------------------------------------------------------------
@@ -39,8 +38,8 @@ result_grounded = hh.detect(grounded_answer, context)
 # predicted_hallucinated is True if *any* claim is not supported.
 print("=== Grounded answer ===")
 print(f"Answer   : {grounded_answer}")
-print(f"Flagged  : {result_grounded.predicted_hallucinated}")   # expect: False
-print(f"Groundedness: {result_grounded.groundedness:.0%}")      # expect: 100%
+print(f"Flagged  : {result_grounded.predicted_hallucinated}")  # expect: False
+print(f"Groundedness: {result_grounded.groundedness:.0%}")  # expect: 100%
 for v in result_grounded.verdicts:
     print(f"  [{v.support.value:>13}] {v.claim.text}")
 print()
@@ -49,15 +48,13 @@ print()
 # "Leonardo da Vinci" contradicts the context (Gustave Eiffel built it).
 # The lexical verifier catches this as unverifiable because "Leonardo da Vinci"
 # shares no content words with the context — it falls below the support threshold.
-hallucinated_answer = (
-    "The Eiffel Tower is in Paris. It was designed by Leonardo da Vinci."
-)
+hallucinated_answer = "The Eiffel Tower is in Paris. It was designed by Leonardo da Vinci."
 
 result_hallucinated = hh.detect(hallucinated_answer, context)
 print("=== Hallucinated answer ===")
 print(f"Answer   : {hallucinated_answer}")
-print(f"Flagged  : {result_hallucinated.predicted_hallucinated}")   # expect: True
-print(f"Groundedness: {result_hallucinated.groundedness:.0%}")      # expect: 50%
+print(f"Flagged  : {result_hallucinated.predicted_hallucinated}")  # expect: True
+print(f"Groundedness: {result_hallucinated.groundedness:.0%}")  # expect: 50%
 for v in result_hallucinated.verdicts:
     marker = "HALL" if v.is_hallucination else "  ok"
     print(f"  [{marker} | {v.support.value:>13}] {v.claim.text}")

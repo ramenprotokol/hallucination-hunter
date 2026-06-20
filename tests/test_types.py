@@ -6,10 +6,10 @@ import pytest
 
 from hh.types import Claim, Detection, Example, Support, Verdict
 
-
 # ---------------------------------------------------------------------------
 # Support / Verdict.is_hallucination
 # ---------------------------------------------------------------------------
+
 
 class TestVerdictIsHallucination:
     def _verdict(self, support: Support) -> Verdict:
@@ -31,6 +31,7 @@ class TestVerdictIsHallucination:
 # ---------------------------------------------------------------------------
 # Example.from_dict
 # ---------------------------------------------------------------------------
+
 
 class TestExampleFromDict:
     def test_basic_fields(self):
@@ -99,10 +100,11 @@ class TestExampleFromDict:
 # Detection properties
 # ---------------------------------------------------------------------------
 
+
 class TestDetection:
     def _make_detection(self, supports: list[Support]) -> Detection:
         claims = [Claim(text=f"claim {i}", index=i) for i in range(len(supports))]
-        verdicts = [Verdict(claim=c, support=s) for c, s in zip(claims, supports)]
+        verdicts = [Verdict(claim=c, support=s) for c, s in zip(claims, supports, strict=True)]
         ex = Example(id="test", answer="irrelevant")
         return Detection(example=ex, verdicts=verdicts, detector="test-det")
 

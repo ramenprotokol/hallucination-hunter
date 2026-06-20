@@ -8,8 +8,9 @@ into memory. See data/README.md for the schema.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable, Iterator
 from pathlib import Path
-from typing import Iterable, Iterator
+from typing import Any
 
 from .types import Example
 
@@ -35,7 +36,7 @@ def save_dataset(examples: Iterable[Example], path: str | Path) -> None:
     p = Path(path)
     with p.open("w", encoding="utf-8") as fh:
         for ex in examples:
-            row = {
+            row: dict[str, Any] = {
                 "id": ex.id,
                 "prompt": ex.prompt,
                 "context": ex.context,
@@ -43,7 +44,7 @@ def save_dataset(examples: Iterable[Example], path: str | Path) -> None:
             }
             if ex.reference:
                 row["reference"] = ex.reference
-            labels = {}
+            labels: dict[str, Any] = {}
             if ex.gold_hallucinated is not None:
                 labels["hallucinated"] = ex.gold_hallucinated
             if ex.gold_unsupported_claims:

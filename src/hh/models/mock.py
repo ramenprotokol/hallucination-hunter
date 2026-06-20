@@ -39,8 +39,14 @@ class MockModel(Model):
         return hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:12]
 
     # -- Model interface ---------------------------------------------------
-    def generate(self, prompt: str, *, system: str | None = None,
-                 temperature: float = 0.0, max_tokens: int = 1024) -> str:
+    def generate(
+        self,
+        prompt: str,
+        *,
+        system: str | None = None,
+        temperature: float = 0.0,
+        max_tokens: int = 1024,
+    ) -> str:
         self.calls.append(prompt)
         if prompt in self.fixtures:
             return self.fixtures[prompt]
@@ -65,8 +71,8 @@ class MockModel(Model):
             return json.dumps(
                 {
                     "support": support,
-                    "rationale": f"mock heuristic: token-overlap verdict for claim "
-                    f"(deterministic, offline).",
+                    "rationale": "mock heuristic: token-overlap verdict for claim "
+                    "(deterministic, offline).",
                 }
             )
         # Generic echo so callers that just want *some* text get something stable.
@@ -78,7 +84,7 @@ def _section(prompt: str, header: str) -> str | None:
     idx = prompt.find(header)
     if idx == -1:
         return None
-    rest = prompt[idx + len(header):]
+    rest = prompt[idx + len(header) :]
     # Stop at the next double newline (section break) if present.
     end = rest.find("\n\n")
     chunk = rest if end == -1 else rest[:end]
@@ -86,8 +92,9 @@ def _section(prompt: str, header: str) -> str | None:
 
 
 def _tokens(text: str) -> set[str]:
-    return {t for t in "".join(c.lower() if c.isalnum() else " " for c in text).split()
-            if len(t) > 2}
+    return {
+        t for t in "".join(c.lower() if c.isalnum() else " " for c in text).split() if len(t) > 2
+    }
 
 
 def _overlap_support(claim: str, context: str) -> str:

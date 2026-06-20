@@ -1,0 +1,31 @@
+# Publish to PyPI.
+#
+# Manual-dispatch only for now so it never runs before PyPI is configured.
+# To enable automatic publishing on each GitHub Release:
+#   1. Set up Trusted Publishing for this repo on PyPI
+#      (https://docs.pypi.org/trusted-publishers/).
+#   2. Uncomment the `release:` trigger below.
+name: release
+
+on:
+  workflow_dispatch:
+  # release:
+  #   types: [published]
+
+jobs:
+  pypi:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # OIDC for PyPI Trusted Publishing — no token needed
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
