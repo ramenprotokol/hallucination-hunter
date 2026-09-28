@@ -151,6 +151,26 @@ class TestGroundednessDetectorLLM:
         det = detector.detect(ex)
         assert det.predicted_hallucinated is True
 
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            "The claim is not supported by the context.",
+            '{"support": "unsupported", "rationale": "no evidence"}',
+            "Unsupported.",
+        ],
+    )
+    def test_negated_support_is_not_read_as_supported(self, raw):
+        # "supported" is a substring of "unsupported" / "not supported"; a judge
+        # saying the claim lacks support must not come back as SUPPORTED.
+        model = MockModel()
+        prompt = LLMVerifier.PROMPT.format(context="Paris is in France.", claim="Paris is big.")
+        model.add_fixture(prompt, raw)
+        detector = load_detector("groundedness", verifier="llm", model=model)
+        det = detector.detect(
+            Example(id="neg", context="Paris is in France.", answer="Paris is big.")
+        )
+        assert det.predicted_hallucinated is True
+
     def test_llm_verifier_no_model_raises(self):
         with pytest.raises(ValueError, match="requires a model"):
             load_detector("groundedness", verifier="llm")

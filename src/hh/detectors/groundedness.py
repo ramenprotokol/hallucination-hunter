@@ -17,6 +17,7 @@ The verification step is pluggable:
 from __future__ import annotations
 
 import json
+import re
 from abc import ABC, abstractmethod
 
 from ..claims import ClaimExtractor, SentenceClaimExtractor
@@ -171,8 +172,11 @@ def _parse_verdict(raw: str) -> tuple[Support, str]:
                 return Support(support), rationale
         except (ValueError, TypeError):
             pass
-    # Last resort: scan the text for a verdict word.
+    # Last resort: scan the text for a verdict word. "unsupported" / "not
+    # supported" contain "supported", so rule those out first.
     low = raw.lower()
+    if re.search(r"\b(?:un|not\s+)supported\b", low):
+        return Support.UNVERIFIABLE, raw
     for s in (Support.CONTRADICTED, Support.SUPPORTED, Support.UNVERIFIABLE):
         if s.value in low:
             return s, raw
