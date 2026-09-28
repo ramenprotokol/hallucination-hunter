@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI runs with a read-only `GITHUB_TOKEN` (`permissions: contents: read`).
 - The release workflow pins `pypa/gh-action-pypi-publish` to a full commit SHA (v1.14.2)
   instead of the movable `release/v1` branch, since that step holds the PyPI OIDC token.
+
 ### Fixed
 - The `llm` verifier no longer reads a judge reply of "unsupported" or "not supported"
   as `supported` (the fallback matched the substring). Such claims are now `unverifiable`,
