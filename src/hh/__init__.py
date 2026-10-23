@@ -10,6 +10,8 @@ from __future__ import annotations
 
 __version__ = "0.1.0"
 
+# Importing the agent registers the "investigate" detector.
+from . import agent  # noqa: F401
 from .dataset import load_dataset
 from .detectors.base import available_detectors, load_detector
 from .eval import EvalRun, run_eval

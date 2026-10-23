@@ -137,10 +137,10 @@ hh eval --dataset data/groundedness_eval.jsonl
 import hh
 
 examples = hh.load_dataset("data/groundedness_eval.jsonl")
-prompts  = hh.load_dataset("data/factual_prompts.jsonl")
+prompts = hh.load_dataset("data/factual_prompts.jsonl")
 
 # Filter grounded examples
-grounded     = [e for e in examples if e.gold_hallucinated is False]
+grounded = [e for e in examples if e.gold_hallucinated is False]
 hallucinated = [e for e in examples if e.gold_hallucinated is True]
 
 print(f"Grounded: {len(grounded)}, Hallucinated: {len(hallucinated)}")

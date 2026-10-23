@@ -13,6 +13,11 @@ CI, demos — runs green with zero API keys. Two modes:
 
 It is honest about what it is: `mock` is a baseline/test backend, not a claim of
 real model quality. Real evaluations use the `anthropic` or `openai` backends.
+
+Tool calling follows the same spirit: `script` is a list of `AssistantTurn`s
+played back in order (the last one repeating when exhausted), so agentic loops
+can be rehearsed deterministically, offline. With no script, the heuristic
+verdict is returned as a final (tool-free) turn.
 """
 
 from __future__ import annotations
@@ -20,15 +25,26 @@ from __future__ import annotations
 import hashlib
 import json
 
-from .base import Model, register
+from .base import AssistantTurn, Model, Tool, register
 
 
 @register("mock")
 class MockModel(Model):
-    def __init__(self, fixtures: dict[str, str] | None = None, **_: object) -> None:
+    supports_tools = True
+
+    def __init__(
+        self,
+        fixtures: dict[str, str] | None = None,
+        script: list[AssistantTurn] | None = None,
+        **_: object,
+    ) -> None:
         # Map of prompt (or fixture key) -> canned completion.
         self.fixtures: dict[str, str] = dict(fixtures or {})
         self.calls: list[str] = []
+        # Tool-call playback: turns are served in order; the last one repeats.
+        self.script: list[AssistantTurn] = list(script or [])
+        self._script_pos = 0
+        self.turns: list[AssistantTurn] = []
 
     # -- fixture management ------------------------------------------------
     def add_fixture(self, prompt: str, completion: str) -> None:
@@ -54,6 +70,31 @@ class MockModel(Model):
         if digest in self.fixtures:
             return self.fixtures[digest]
         return self._heuristic(prompt)
+
+    # -- tool-calling interface --------------------------------------------
+    def generate_with_tools(
+        self,
+        messages: list[dict],
+        tools: list[Tool],
+        *,
+        system: str | None = None,
+        temperature: float = 0.0,
+        max_tokens: int = 1024,
+    ) -> AssistantTurn:
+        last_user = next(
+            (m.get("content", "") for m in reversed(messages) if m.get("role") == "user"), ""
+        )
+        self.calls.append(str(last_user))
+        if self.script:
+            pos = min(self._script_pos, len(self.script) - 1)
+            self._script_pos += 1
+            turn = self.script[pos]
+            self.turns.append(turn)
+            return turn
+        # No script: answer immediately with the heuristic verdict (final turn).
+        turn = AssistantTurn(text=self._heuristic(str(last_user)))
+        self.turns.append(turn)
+        return turn
 
     # -- heuristic fallback ------------------------------------------------
     def _heuristic(self, prompt: str) -> str:

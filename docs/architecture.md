@@ -181,8 +181,14 @@ class Model(ABC):
     name: str = "model"
 
     @abstractmethod
-    def generate(self, prompt: str, *, system: str | None = None,
-                 temperature: float = 0.0, max_tokens: int = 1024) -> str: ...
+    def generate(
+        self,
+        prompt: str,
+        *,
+        system: str | None = None,
+        temperature: float = 0.0,
+        max_tokens: int = 1024,
+    ) -> str: ...
 ```
 
 A class decorated with `@register("my_backend")` is added to the model registry
@@ -204,6 +210,7 @@ keyword arguments.
 ```python
 from ..types import Detection, Example
 from .base import Detector, register
+
 
 @register("my_detector")
 class MyDetector(Detector):
@@ -246,15 +253,23 @@ changes.
 import os
 from .base import Model, register
 
+
 @register("my_backend")
 class MyBackendModel(Model):
-    def __init__(self, model_id: str = "default-v1",
-                 api_key: str | None = None, **_: object) -> None:
+    def __init__(
+        self, model_id: str = "default-v1", api_key: str | None = None, **_: object
+    ) -> None:
         self.model_id = model_id
         self._api_key = api_key or os.environ.get("MY_BACKEND_API_KEY")
 
-    def generate(self, prompt: str, *, system: str | None = None,
-                 temperature: float = 0.0, max_tokens: int = 1024) -> str:
+    def generate(
+        self,
+        prompt: str,
+        *,
+        system: str | None = None,
+        temperature: float = 0.0,
+        max_tokens: int = 1024,
+    ) -> str:
         # Call your backend here and return a plain string.
         ...
 ```

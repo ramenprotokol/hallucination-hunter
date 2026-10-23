@@ -53,12 +53,19 @@ class Verdict:
 
     claim: Claim
     support: Support
-    # 0.0-1.0 — how confident the detector is in this verdict.
+    # 0.0-1.0 — how confident the detector is in this verdict. For the lexical
+    # and self-consistency verifiers this is the measured token overlap /
+    # sample agreement. Agent verdicts use a fixed scale: 1.0 verified call,
+    # 0.9 support carried by a tool-verified quote, 0.8 parsed from a non-JSON
+    # answer, 0.5 downgraded for missing evidence, 0.0 budget exhausted.
     score: float = 1.0
     # Human-readable reason; for LLM verifiers this is the model's rationale.
     rationale: str = ""
     # The slice(s) of context the detector leaned on, when it can name them.
     evidence: str = ""
+    # Compact record of the steps taken to reach this verdict (agent runs):
+    # one entry per tool call, e.g. 'search_docs("fares") -> 2 hits'.
+    trace: tuple[str, ...] = ()
 
     @property
     def is_hallucination(self) -> bool:

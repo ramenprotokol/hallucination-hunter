@@ -76,24 +76,62 @@ class LLMClaimExtractor(ClaimExtractor):
     """Decompose an answer into atomic claims using a model."""
 
     PROMPT = (
-        "Break the following ANSWER into a list of atomic factual claims. "
-        "Each claim must state exactly one fact and be understandable on its own. "
+        "Break the following ANSWER into ATOMIC factual claims — one fact per claim.\n"
+        "Rules:\n"
+        "- Split every coordination: a sentence like 'X happened in 2019 and "
+        "Y also happened' is TWO claims, never one.\n"
+        "- Each claim must stand alone and be verifiable on its own.\n"
+        "- Do not merge two facts just because they share a subject.\n"
+        "- Keep the original wording as much as possible.\n"
         "Return ONLY a JSON array of strings.\n\nANSWER:\n{answer}\n"
     )
 
-    def __init__(self, model: Model) -> None:
+    # Second pass for claims that still look compound after extraction.
+    SPLIT_PROMPT = (
+        "The CLAIM below may state more than one fact. If it does, split it "
+        "into atomic claims (original wording, one fact each). If it already "
+        "states exactly one fact, return it unchanged.\n"
+        "Return ONLY a JSON array of strings.\n\nCLAIM:\n{claim}\n"
+    )
+
+    def __init__(self, model: Model, *, split_compound: bool = True) -> None:
         self.model = model
+        self.split_compound = split_compound
 
     def extract(self, answer: str) -> list[Claim]:
         text = (answer or "").strip()
         if not text:
             return []
         raw = self.model.generate(self.PROMPT.format(answer=text), temperature=0.0)
-        items = _parse_json_array(raw)
+        items = [str(s).strip() for s in _parse_json_array(raw) if str(s).strip()]
         if not items:
             # Fall back to deterministic splitting rather than returning nothing.
             return SentenceClaimExtractor().extract(text)
-        return [Claim(text=str(s).strip(), index=i) for i, s in enumerate(items) if str(s).strip()]
+        claims: list[Claim] = []
+        for i, item in enumerate(self._atomic(items)):
+            claims.append(Claim(text=item, index=i))
+        return claims
+
+    def _atomic(self, items: list[str]) -> list[str]:
+        """Second pass: split claims that still look compound, keep the rest."""
+        out: list[str] = []
+        for item in items:
+            if self.split_compound and _looks_compound(item):
+                out.extend(self._refine(item))
+            else:
+                out.append(item)
+        return out
+
+    def _refine(self, claim_text: str) -> list[str]:
+        raw = self.model.generate(self.SPLIT_PROMPT.format(claim=claim_text), temperature=0.0)
+        parts = [str(s).strip() for s in _parse_json_array(raw) if str(s).strip()]
+        # A refusal to split, garbage, or a 1-item reply all keep the original.
+        return parts if len(parts) > 1 else [claim_text]
+
+
+def _looks_compound(text: str) -> bool:
+    """Heuristic: a coordinator joining two predicates is two facts in one."""
+    return " and " in text.lower()
 
 
 def _parse_json_array(raw: str) -> list:

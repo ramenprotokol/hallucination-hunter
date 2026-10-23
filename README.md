@@ -65,6 +65,56 @@ export ANTHROPIC_API_KEY=...
 hh eval --dataset data/groundedness_eval.jsonl --verifier llm --model anthropic
 ```
 
+### Agent mode: `hh investigate`
+
+`hh investigate` checks an answer claim-by-claim with a tool-using agent. Each
+FACT gets its own verdict: the answer is decomposed into atomic claims (pass
+`--sentences` for cheaper sentence-level runs), then for each claim the model
+decides how to gather evidence — search a folder of source documents, run a
+groundedness check on a snippet it found, or sample the model for
+self-consistency — and commits to a verdict that names the evidence it used,
+with a per-claim trace of every tool call.
+
+```bash
+# with an OpenAI-compatible endpoint and your own key (no extra install);
+# the model must support tool calling
+export HH_API_KEY=sk-or-...
+export HH_MODEL=<an open-source model with tool calling>
+# optional, defaults to https://openrouter.ai/api/v1
+export HH_BASE_URL=https://openrouter.ai/api/v1
+hh investigate \
+  --answer "An adult return is $14 and you can pay cash or card." \
+  --prompt "What does a return cost?" \
+  --docs ./source-docs \
+  --model openai-compat
+
+# a whole JSONL of answers in one go (one object per line, 'answer' required,
+# 'question'/'prompt' and 'context' optional) — one combined report; progress
+# prints per answer to stderr and a failing answer is skipped, not fatal
+hh investigate --answers answers.jsonl --docs ./source-docs --model openai-compat
+
+# offline, deterministic (mock backend, scripted or heuristic)
+hh investigate --answer "The crossing takes 40 minutes." --docs ./source-docs
+```
+
+Because the agent is just another registered detector, `hh eval --detector
+investigate --docs ./source-docs` runs it over a whole dataset too.
+
+**Known limits** — read verdicts with these in mind:
+
+- **No entailment check.** A verified quote proves the text exists in a source
+  file, not that it supports the claim. A qualifier next to the quoted words is
+  now shown (the evidence line is the full sentence), but nothing yet checks
+  that the quote and the claim actually agree.
+- **Non-deterministic.** The same answer can split into different claims on
+  different runs (observed: 3 vs 8 for one answer), and a claim's verdict can
+  flip — one claim came back `unverifiable`, `unverifiable`, then
+  `contradicted` across three runs, two of them with the evidence checks
+  already in place.
+- **Slow and serial.** Every claim investigates independently, re-searching
+  and re-reading the same documents; a 3-answer batch with 22 claims took
+  ~9 minutes on the model API.
+
 ## How it works
 
 An answer is **grounded** if every factual claim it makes is supported by the
@@ -155,7 +205,7 @@ import hh
 context = "The Eiffel Tower is a wrought-iron tower in Paris, completed in 1889 by Gustave Eiffel's company."
 result = hh.detect("The Eiffel Tower is in Paris. It was designed by Leonardo da Vinci.", context)
 
-print(result.predicted_hallucinated)   # True
+print(result.predicted_hallucinated)  # True
 for v in result.verdicts:
     print(v.support.value, "-", v.claim.text)
 # supported     - The Eiffel Tower is in Paris.

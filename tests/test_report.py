@@ -6,8 +6,9 @@ import json
 
 from hh.detectors.base import load_detector
 from hh.eval import EvalRun, run_eval
+from hh.metrics import evaluate
 from hh.report import to_json, to_markdown
-from hh.types import Example
+from hh.types import Claim, Detection, Example, Support, Verdict
 
 
 def _make_run() -> EvalRun:
@@ -55,6 +56,50 @@ class TestToJson:
         assert "detection_quality" in parsed
 
 
+class TestToJsonDetections:
+    """JSON carries the same per-claim detail as the markdown report."""
+
+    def test_json_carries_every_detection(self):
+        parsed = json.loads(to_json(_make_run()))
+        assert len(parsed["detections"]) == 2
+        first = parsed["detections"][0]
+        assert first["id"] == "r1"
+        assert first["predicted_hallucinated"] is False
+        assert 0.0 <= first["groundedness"] <= 1.0
+        v = first["verdicts"][0]
+        assert set(v) == {"claim", "support", "score", "rationale", "evidence", "trace"}
+        assert v["claim"] == "Paris is the capital of France."
+        assert v["support"] in ("supported", "contradicted", "unverifiable")
+        assert v["trace"] == []
+
+    def test_json_verdict_detail_is_untruncated(self):
+        det = Detection(
+            example=Example(id="d1", answer="A claim."),
+            verdicts=[
+                Verdict(
+                    claim=Claim("A claim."),
+                    support=Support.UNVERIFIABLE,
+                    score=0.5,
+                    rationale="no evidence quote verified against the sources",
+                    evidence='"Bicycles cost $3 each way." (02_fares.md)',
+                    trace=("search_docs(x) -> 1 hit", "read_doc(y) -> text"),
+                )
+            ],
+        )
+        run = EvalRun(result=_make_run().result, detections=[det])
+        v = json.loads(to_json(run))["detections"][0]["verdicts"][0]
+        assert v["score"] == 0.5
+        assert v["rationale"] == "no evidence quote verified against the sources"
+        assert v["evidence"] == '"Bicycles cost $3 each way." (02_fares.md)'
+        assert v["trace"] == ["search_docs(x) -> 1 hit", "read_doc(y) -> text"]
+
+    def test_json_empty_detections_is_an_empty_list(self):
+        run = EvalRun(result=evaluate([]), detections=[])
+        parsed = json.loads(to_json(run))
+        assert parsed["detections"] == []
+        assert parsed["n_examples"] == 0
+
+
 class TestToMarkdown:
     def test_contains_detector_name(self):
         run = _make_run()
@@ -87,3 +132,21 @@ class TestToMarkdown:
     def test_is_string(self):
         run = _make_run()
         assert isinstance(to_markdown(run), str)
+
+
+class TestConfidenceDisplay:
+    """Verdict confidence shows in the report when it is not a full call."""
+
+    def _markdown_with_score(self, score: float) -> str:
+        det = Detection(
+            example=Example(id="conf", answer="A claim."),
+            verdicts=[Verdict(claim=Claim("A claim."), support=Support.UNVERIFIABLE, score=score)],
+        )
+        run = EvalRun(result=_make_run().result, detections=[det])
+        return to_markdown(run, show_examples=1)
+
+    def test_below_full_confidence_is_shown(self):
+        assert "(confidence 50%)" in self._markdown_with_score(0.5)
+
+    def test_full_confidence_is_quiet(self):
+        assert "confidence" not in self._markdown_with_score(1.0)

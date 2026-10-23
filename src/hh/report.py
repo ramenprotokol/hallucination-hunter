@@ -9,7 +9,34 @@ from .types import Support
 
 
 def to_json(run: EvalRun, indent: int = 2) -> str:
-    return json.dumps(run.result.to_dict(), indent=indent)
+    """Totals plus every detection, with the same detail as the markdown.
+
+    Unlike the markdown report (a display, truncated for reading), the JSON
+    payload is a data export: rationale, evidence, and trace strings are
+    carried whole, never display-truncated.
+    """
+    payload = run.result.to_dict()
+    payload["detections"] = [
+        {
+            "id": det.example.id,
+            "prompt": det.example.prompt,
+            "predicted_hallucinated": det.predicted_hallucinated,
+            "groundedness": round(det.groundedness, 4),
+            "verdicts": [
+                {
+                    "claim": v.claim.text,
+                    "support": v.support.value,
+                    "score": v.score,
+                    "rationale": v.rationale,
+                    "evidence": v.evidence,
+                    "trace": list(v.trace),
+                }
+                for v in det.verdicts
+            ],
+        }
+        for det in run.detections
+    ]
+    return json.dumps(payload, indent=indent)
 
 
 _SYMBOL = {
@@ -65,9 +92,19 @@ def to_markdown(
             lines.append("")
             for v in det.verdicts:
                 sym = _SYMBOL.get(v.support, "?")
-                lines.append(f"- {sym} **{v.support.value}** — {v.claim.text}")
+                conf = "" if v.score >= 1.0 else f" (confidence {v.score:.0%})"
+                lines.append(f"- {sym} **{v.support.value}**{conf} — {v.claim.text}")
                 if v.rationale:
                     lines.append(f"  - _{v.rationale}_")
+                if v.evidence:
+                    lines.append(f"  - evidence: {_short(v.evidence, 200)}")
+                for step in v.trace:
+                    lines.append(f"  - trace: {_short(step, 160)}")
             lines.append("")
 
     return "\n".join(lines)
+
+
+def _short(text: str, cap: int) -> str:
+    text = " ".join(text.split())
+    return text if len(text) <= cap else text[: cap - 1] + "…"
