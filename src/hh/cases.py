@@ -24,7 +24,7 @@ from .models.base import AssistantTurn, Model, Tool
 from .types import Example
 
 MODEL_TEXT_CHARS = 500
-TOOL_RESULT_CHARS = 300
+TOOL_RESULT_CHARS = 1200
 
 
 class CaseFileError(ValueError):
