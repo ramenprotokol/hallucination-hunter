@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `hh cases`: run a fixed set of test cases through `hh investigate` and write a
+  plain-text run log (model, system prompt, tools, every tool call, verdicts,
+  PASS or FAIL per case).
 - Agent mode: `hh investigate` checks an answer claim-by-claim with a tool-using
   agent that can search a folder of source docs (`--docs`), run a groundedness
   check, or sample the model for self-consistency, then commits to a verdict

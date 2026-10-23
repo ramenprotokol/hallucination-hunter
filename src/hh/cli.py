@@ -3,6 +3,7 @@
     hh eval          run a detector over a dataset and report metrics
     hh detect        check a single answer against a context, ad hoc
     hh investigate   check an answer claim-by-claim with a tool-using agent
+    hh cases         run fixed test cases through investigate and write a run log
     hh list          show available detectors and model backends
 
 Built on argparse from the standard library — no third-party CLI deps, so `hh`
@@ -15,6 +16,7 @@ import argparse
 import json
 import sys
 import time
+from pathlib import Path
 
 from . import __version__
 from .dataset import load_dataset
@@ -100,6 +102,30 @@ def cmd_investigate(args) -> int:
     show = args.show if args.show is not None else len(detections)
     _emit(run, args, show_examples=max(show, 1))
     return 1 if failures else 0
+
+
+def cmd_cases(args) -> int:
+    from .cases import CaseFileError, load_cases, run_cases, summary_lines
+
+    try:
+        cases = load_cases(args.cases)
+        if not Path(args.docs).is_dir():
+            raise CaseFileError(f"docs folder not found: {args.docs}")
+        model = _load_model(args)
+    except (CaseFileError, ValueError) as e:
+        print(f"hh cases: {_cli_error(e)}", file=sys.stderr)
+        return 2
+    log, results = run_cases(cases, model, args.docs, model_id=args.model_id)
+    try:
+        with open(args.log, "w", encoding="utf-8") as fh:
+            fh.write(log)
+    except OSError as e:
+        print(f"hh cases: cannot write {args.log}: {e.strerror or e}", file=sys.stderr)
+        return 2
+    for line in summary_lines(results, model):
+        print(line)
+    print(f"wrote run log to {args.log}", file=sys.stderr)
+    return 0
 
 
 def _run_batch(
@@ -306,6 +332,24 @@ def build_parser() -> argparse.ArgumentParser:
     pi.add_argument("--format", default="markdown", choices=["markdown", "json"])
     pi.add_argument("--out", default=None, help="write the report to a file")
     pi.set_defaults(func=cmd_investigate)
+
+    pc = sub.add_parser(
+        "cases",
+        help="run fixed test cases through investigate and write a run log",
+    )
+    pc.add_argument("--cases", required=True, help="JSONL file of test cases, one per line")
+    pc.add_argument("--docs", required=True, help="folder of source documents")
+    pc.add_argument("--log", required=True, help="where to write the run log")
+    pc.add_argument(
+        "--backend",
+        "--model",
+        dest="model",
+        default="mock",
+        choices=available_backends(),
+        help="model backend driving the agent (default: mock)",
+    )
+    pc.add_argument("--model-id", default=None, help="override the backend's default model id")
+    pc.set_defaults(func=cmd_cases)
 
     pl = sub.add_parser("list", help="list detectors and model backends")
     pl.set_defaults(func=cmd_list)

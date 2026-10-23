@@ -100,6 +100,49 @@ hh investigate --answer "The crossing takes 40 minutes." --docs ./source-docs
 Because the agent is just another registered detector, `hh eval --detector
 investigate --docs ./source-docs` runs it over a whole dataset too.
 
+#### Test cases and run logs
+
+`hh cases` runs a fixed set of test cases through the same investigate agent,
+unchanged, and writes a run log that shows what happened.
+
+```bash
+hh cases --cases cases.jsonl --docs ./source-docs --log run.log \
+  --backend openai-compat
+```
+
+Add `--model-id ID` to override the model. The command prints one line per case
+(`case 1 PASS` or `case 1 FAIL reason`) and `cases passed: X of N`. The exit
+code is 0 when the run finished, even if some cases failed, and 2 on a usage
+error.
+
+The cases file has one JSON object per line:
+
+```json
+{"id": 1, "purpose": "Bug being fixed", "question": "What does a return cost?", "answer": "An adult return is $14 and you can pay cash or card.", "data": ["fares.csv"], "expect": {"claims": [{"contains": "$14", "verdict": "contradicted"}], "must_call": ["search_docs"], "must_not_call": [], "max_claims": null}}
+```
+
+- `data` lists the files in `--docs` the agent may see for this case. Leave it
+  out to give the agent the whole folder.
+- `claims`: each entry needs a claim whose text contains `contains` (ignoring
+  case) with exactly that verdict (`supported`, `contradicted` or
+  `unverifiable`).
+- `must_call` and `must_not_call` use the agent's own tool names:
+  `search_docs`, `read_doc`, `groundedness_check`, `self_consistency_check`.
+- `max_claims` is optional. If set, the answer must split into at most that
+  many claims. Use 0 for an answer with no facts in it.
+
+A case passes only if every expectation holds. Otherwise it fails with one
+short reason per broken expectation. A case that crashes or hits a model API
+error fails with the error as the reason, and the run goes on.
+
+The run log is plain text, written by the app. It starts with the run time,
+the model id, the endpoint (scheme and host only) and the full system prompt
+and tool definitions as sent. For each case it lists the question and answer,
+what the model said, every tool call with its result, the verdicts and the
+result. It ends with `cases passed: X of N`. If the system prompt or tools
+change between cases, they are printed again where they change. The API key is
+never written to the log or to the screen.
+
 **Known limits** — read verdicts with these in mind:
 
 - **No entailment check.** A verified quote proves the text exists in a source
